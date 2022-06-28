@@ -19,6 +19,14 @@ struct TrieNode {
 		total = 0;
 		final = false;
 	}
+
+
+	float probability(int index) {
+		//cout << "index " << index << " " << "count " << count[index] << " " << "total " << total << endl;
+		return float((count[index])) / total;
+	}
+
+
 };
 
 
@@ -34,19 +42,20 @@ public:
 	~Trie() {};
 
 
-	//HINT: буква A-Z это не число 0-N и не может использоваться как индекс в массив
 
+	//HINT: буква A-Z это не число 0-N и не может использоваться как индекс в массив
 	int getIndex(char ch) {
-		ch = tolower(ch);					
+		ch = tolower(ch);
 		if (ch >= 'a' && ch <= 'z') {
 			return ch - 'a';
 		}
-		else return -1;							
+		else return -1;
 	}
-	
 
-	
-	
+	char getCharAt(int index) {
+		return 'a' + index;
+	}
+
 
 	// insert a word ‘s’ to Trie structure. New nodes created set their ‘total’ field to 1.
 	// If the word ‘s’ is already in the tree, there is nothing to insert.
@@ -58,7 +67,7 @@ public:
 		while (*i != 0) {								//go letter by letter
 			
 			index = getIndex(*i);
-			cout << "insert letter: " << *i << " " << "index: " << index << endl;
+			//cout << "insert letter: " << *i << " " << "index: " << index << endl;
 
 			// do  magic
 			node->total++; 
@@ -71,7 +80,7 @@ public:
 			}
 
 			node = node->next[index];
-			i = i++;								
+			i++;								
 		}
 
 		node->total++;
@@ -82,6 +91,27 @@ public:
 	};
 
 
+	TrieNode* findLastNode(const string& s) {
+		const char* i = s.c_str();
+		int index;
+		TrieNode* node = root;
+
+		while (*i != 0) {								
+
+			index = getIndex(*i);
+			//cout << "find letter: " << *i << " " << "index: " << index << endl;
+
+			if (node->next[index] != nullptr) {
+				node = node->next[index];
+				i++;
+			}
+			else return nullptr;								//there is no such a word
+		}
+
+		return node;
+	}
+
+	
 	// search for a word ‘s’ in the Trie and also update probabilities of all nodes traversed 
 	// during the search by incrementing their ‘total’ and ‘count’ (if requested)
 	// return true if the word ‘s’ was present in the Trie
@@ -93,14 +123,14 @@ public:
 		while (*i != 0) {								
 
 			index = getIndex(*i);
-			cout << "find letter: " << *i << " " << "index: " << index << endl;
+			//cout << "find letter: " << *i << " " << "index: " << index << endl;
 
 			node->total++;
 			node->count[index] ++;
 
 			if (node->next[index] != nullptr) {
 				node = node->next[index];
-				i = i++;
+				i++;
 			}
 			else return false;
 		}
@@ -120,19 +150,10 @@ public:
 	bool remove(const string& s) {
 		//findWord();
 		const char* i = s.c_str();
-		int index;
-		TrieNode* node = root;
+		TrieNode* node = findLastNode(s);
 
-		while (*i != 0) {								// find last node
-
-			index = getIndex(*i);
-			cout << "find letter: " << *i << " " << "index: " << index << endl;
-
-			if (node->next[index] != nullptr) {
-				node = node->next[index];
-				i = i++;
-			}
-			else return false;								//there is no such a word
+		if (node == nullptr) {
+			return false;
 		}
 
 		//deleteFinal
@@ -162,37 +183,105 @@ public:
 	}
 
 
+	// calculate the probability of user to input letters from ‘s’ 
+	float probabilityWord(const string& s) {
+		float prob = 1;
+		const char* i = s.c_str();
+		int index;
+		TrieNode* node = root;
+
+		while (*i != 0) {
+			if (node != nullptr) {
+				index = getIndex(*i);
+				prob = prob * node->probability(index);
+				//cout << "prob " << prob << " " << "index " << index << endl;
+
+				node = node->next[index];
+				i++;
+			}
+			else {					// there is not such word
+				prob = 0; 
+				i = 0;
+			}
+		}
+		return prob;
+	}
+
+
 	// given string ‘s’ try to predict autocompletion of the string ‘s’ to a valid word
 	// traverse the Trie according to string ‘s’ without updating probabilities 
 	// and continue traversal for following nodes according to most probabilistic path
 	// return a predicted word
-	string predict(const string& s);
 
-	// calculate the probability of user to input letters from ‘s’ 
-	float probability(const string& s);
+	string predict(const string& s) {
+		string predictable = s;
+
+		// move on  trie to the last node of the given string
+		TrieNode* node = findLastNode(s);
+
+		if (node == nullptr) {
+			return predictable;
+		}
+
+		// loop till find final { choose the most higher probability for the next letter }
+		float prob;
+		int index;
+
+		while (node != nullptr){
+			prob = 0;
+			index = 0;
+
+			for (int i = 0; i < 26; i++) {					//find the highest probability for next letter
+				float tmp = node->probability(i);
+
+				if (prob < tmp) {
+					prob = tmp;
+					index = i;
+				}
+			}
+		
+			predictable = predictable + getCharAt(index);		//add letter to string
+			node = node->next[index];
+			
+			if (node->final) {
+				break;
+			}
+		} 
+
+		return predictable;	
+	}
 
 
-
+	// пройти по дереву и вернуть все слова
+	// у каждого слова посчитать вероятность
+	// вернуть 3 самых частых
+	// 
+	// вернуть массив из трех стрингов
+	// первые три слова кладем в массив
+	// следующее слово считаем вероятность и вставляем в массив вместо слова с меньшей вероятностью
+	//string[] predict(){}
 
 	void print() {
 		cout << "total words: " << countWords << endl;
 		cout << "runs by trie: " << root->total << endl;
+		TrieNode* node = root;	
 	}
+
+
 
 	void printLastNode(Trie* t) {
 		//find last node
-
 	}
 
 	// LATER: dump / visualize the Trie structure using XDot (will explain you later)
-// HINT: implement using helper function visualize(TrieNode *next)
-// the XDot database can be also used to restore ready Trie structure from file.
-// void visualize();
+	// HINT: implement using helper function visualize(TrieNode *next)
+	// the XDot database can be also used to restore ready Trie structure from file.
+	// void visualize();
 
 private:
 	// HINT: implement predict using helper function. The function predicts the most probable 
-// ending for the current node by traversing most probabilistic path and returning 3 most 
-// probable results through the ‘result’ vector.
+	// ending for the current node by traversing most probabilistic path and returning 3 most 
+	// probable results through the ‘result’ vector.
 	//void predict_suffix(TrieNode* current, vector<string>& result);
 
 	
