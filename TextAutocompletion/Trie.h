@@ -165,7 +165,8 @@ public:
 		int isNext = 0;										//how many there are the following words
 
 		while (node->final) {
-			for (int i = 0; i < 26; i++) {
+			int i;
+			for (i = 0; i < 26; i++) {
 				if (node->next[i] != nullptr) {
 					isNext++;									
 				}
@@ -173,7 +174,7 @@ public:
 
 			if (isNext == 0) {
 				node = node->prev;
-				delete node->next;
+				delete node->next[i];
 			}
 			else break;
 		}
